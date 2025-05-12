@@ -7,10 +7,10 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "bit_collision_free_MF"
-dynamic = ["version"]                      # 从包里读取 __version__
+dynamic = ["version"]                      
 description = "Generate molecular fingerprints with guaranteed collision‑free bits."
 readme = "README.md"
-license = {file = "LICENSE"}              # 指向 MIT 许可证文件
+license = {file = "LICENSE"}              
 requires-python = ">=3.9"
 
 authors = [
@@ -38,13 +38,13 @@ classifiers = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/your‑repo/bit_collision_free_MF"
+Homepage = "https://github.com/Shifa-Zhong/bit_collision_free_MF"
 Documentation = "https://your‑repo.github.io/bit_collision_free_MF"
 
 # ---------------------------------------
 # setuptools 额外配置
 [tool.setuptools.dynamic]
-version = {attr = "bit_collision_free_MF.__version__"}  # 比原来简洁、常见的写法
+version = {attr = "bit_collision_free_MF.__version__"}  
 
 [tool.setuptools.packages.find]
 where = ["."]
