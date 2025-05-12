@@ -43,15 +43,6 @@ cd bit_collision_free_MF
 pip install -e .
 ```
 
-### Troubleshooting
-
-If you encounter issues installing RDKit:
-
-1. **Verify Python version**: This package requires Python 3.9 or higher.
-2. **Alternative installation methods**:
-   - For older Python versions: `pip install rdkit-pypi`
-   - Using conda: `conda install -c conda-forge rdkit`
-
 ## Features
 
 - Automatically determines the optimal fingerprint length to avoid bit collisions
