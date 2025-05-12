@@ -30,7 +30,7 @@ This will automatically install all dependencies, including RDKit.
 pip install numpy pandas rdkit
 
 # Install the package
-pip install bit_collision_free_MF
+pip install -U bit_collision_free_MF  
 ```
 
 For development installation:
