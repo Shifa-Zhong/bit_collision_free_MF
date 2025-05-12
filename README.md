@@ -18,7 +18,7 @@ A Python package for generating molecular fingerprints without bit collisions.
 ### Simple Installation
 
 ```bash
-pip install bit_collision_free_MF
+pip install -U bit_collision_free_MF
 ```
 
 This will automatically install all dependencies, including RDKit.
