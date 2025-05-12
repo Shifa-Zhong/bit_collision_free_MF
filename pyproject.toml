@@ -1,0 +1,51 @@
+# pyproject.toml
+# =======================================
+
+[build-system]
+requires = ["setuptools>=69.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "bit_collision_free_MF"
+dynamic = ["version"]                      # 从包里读取 __version__
+description = "Generate molecular fingerprints with guaranteed collision‑free bits."
+readme = "README.md"
+license = {file = "LICENSE"}              # 指向 MIT 许可证文件
+requires-python = ">=3.9"
+
+authors = [
+  {name = "Shifa Zhong", email = "sfzhong@tongji.edu.cn"},
+  {name = "Jibai Li",   email = "51263903065@stu.ecnu.edu.cn"},
+]
+
+dependencies = [
+  "numpy>=1.24",
+  "pandas>=2.0",
+  "rdkit-pypi",
+]
+
+classifiers = [
+  "License :: OSI Approved :: MIT License",
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Science/Research",
+  "Topic :: Scientific/Engineering :: Chemistry",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Operating System :: OS Independent",
+]
+
+[project.urls]
+Homepage = "https://github.com/your‑repo/bit_collision_free_MF"
+Documentation = "https://your‑repo.github.io/bit_collision_free_MF"
+
+# ---------------------------------------
+# setuptools 额外配置
+[tool.setuptools.dynamic]
+version = {attr = "bit_collision_free_MF.__version__"}  # 比原来简洁、常见的写法
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["bit_collision_free_MF*"]
