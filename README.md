@@ -36,7 +36,7 @@ pip install bit_collision_free_MF
 For development installation:
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/bit_collision_free_MF.git
+git clone https://github.com/Shifa-Zhong/bit_collision_free_MF.git
 cd bit_collision_free_MF
 
 # Install in development mode
@@ -117,9 +117,27 @@ result_df.to_csv('fingerprints.csv', index=False)
 
 ## License
 
-This software is currently not open source. All rights reserved. Redistribution, modification, or use of this software in any form is not permitted until the associated research article is formally accepted and published.
+MIT License
 
-Upon acceptance, the software will be released under the MIT License.
+Copyright (c) 2025  Shifa Zhong; Jibai Li
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
 
 ## Contact
 
