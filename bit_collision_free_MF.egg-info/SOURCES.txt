@@ -1,0 +1,12 @@
+LICENSE
+README.md
+pyproject.toml
+bit_collision_free_MF/__init__.py
+bit_collision_free_MF/__version__.py
+bit_collision_free_MF/fingerprint.py
+bit_collision_free_MF/utils.py
+bit_collision_free_MF.egg-info/PKG-INFO
+bit_collision_free_MF.egg-info/SOURCES.txt
+bit_collision_free_MF.egg-info/dependency_links.txt
+bit_collision_free_MF.egg-info/requires.txt
+bit_collision_free_MF.egg-info/top_level.txt
