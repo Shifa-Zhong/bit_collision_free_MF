@@ -39,7 +39,7 @@ classifiers = [
 
 [project.urls]
 Homepage = "https://github.com/Shifa-Zhong/bit_collision_free_MF"
-Documentation = "https://your‑repo.github.io/bit_collision_free_MF"
+Documentation = "https://github.com/Shifa-Zhong/bit_collision_free_MF#readme"
 
 # ---------------------------------------
 # setuptools 额外配置

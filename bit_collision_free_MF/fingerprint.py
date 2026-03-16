@@ -36,31 +36,44 @@ class CollisionFreeMorganFP:
         self.radius = radius
         self.length = length
         self._zero_columns: List[int] = []
+        self._is_fitted: bool = False
 
-    def fit(self, smiles_list: List[str]) -> 'CollisionFreeMorganFP':
+    def fit(self, smiles_list: List[str],
+            remove_zero_columns: bool = False) -> 'CollisionFreeMorganFP':
         """
-        Determine the optimal fingerprint length to avoid bit collisions.
+        Determine the optimal fingerprint length to avoid bit collisions
+        and optionally record zero columns for consistent removal.
 
         Parameters
         ----------
         smiles_list : List[str]
             A list of SMILES strings to analyze.
+        remove_zero_columns : bool, default=False
+            Whether to identify and record zero columns for later removal
+            in transform().
 
         Returns
         -------
         CollisionFreeMorganFP
             The fitted object.
         """
-        # Create a temporary dataframe to use with our utility function
-        temp_df = pd.DataFrame({'smiles': smiles_list})
-
-        # Special handling: if radius==0 and length is None, use radius=1 to get optimized length
         if self.length is None:
-            if self.radius == 0:
-                self.length = get_optimized_length(temp_df, 1)
-            else:
-                self.length = get_optimized_length(temp_df, self.radius)
+            # When radius==0, all bitInfo entries share radius 0 so the
+            # collision detector (which compares radii) cannot find any
+            # collision.  Using radius=1 yields a superset of features,
+            # so a length that is collision-free at radius=1 is guaranteed
+            # to be collision-free at radius=0 as well.
+            detect_radius = max(self.radius, 1)
+            self.length = get_optimized_length(smiles_list, detect_radius)
 
+        if remove_zero_columns:
+            fingerprints = np.vstack([self._get_fingerprint(s) for s in smiles_list])
+            sum_cols = fingerprints.sum(axis=0)
+            self._zero_columns = np.where(sum_cols == 0)[0].tolist()
+        else:
+            self._zero_columns = []
+
+        self._is_fitted = True
         return self
 
     def _get_fingerprint(self, smiles: str) -> np.ndarray:
@@ -90,31 +103,40 @@ class CollisionFreeMorganFP:
         """
         Generate fingerprints for a list of SMILES strings.
 
+        If zero columns were recorded during fit(), they are always removed
+        from the output to ensure consistent dimensionality between training
+        and test sets. The ``remove_zero_columns`` parameter here additionally
+        removes columns that are all zeros in the *current* batch (only when
+        fit() did not already record zero columns).
+
         Parameters
         ----------
         smiles_list : List[str]
             A list of SMILES strings to convert to fingerprints.
         remove_zero_columns : bool, default=False
-            Whether to remove columns that are all zeros.
+            Whether to remove columns that are all zeros in this batch.
+            Ignored if zero columns were already recorded during fit().
 
         Returns
         -------
         np.ndarray
             A 2D array of fingerprints, where each row is a fingerprint.
         """
-        # Generate fingerprints for all molecules
+        if not self._is_fitted:
+            raise RuntimeError("Must call fit() before transform().")
+
         fingerprints = np.vstack([self._get_fingerprint(s) for s in smiles_list])
 
-        # Identify and remove zero columns if requested
-        if remove_zero_columns:
+        # Use zero columns from fit() if available, otherwise optionally detect from this batch
+        zero_cols = self._zero_columns
+        if not zero_cols and remove_zero_columns:
             sum_cols = fingerprints.sum(axis=0)
-            self._zero_columns = np.where(sum_cols == 0)[0].tolist()
+            zero_cols = np.where(sum_cols == 0)[0].tolist()
 
-            # Create a mask to keep non-zero columns
-            if self._zero_columns:
-                mask = np.ones(fingerprints.shape[1], dtype=bool)
-                mask[self._zero_columns] = False
-                fingerprints = fingerprints[:, mask]
+        if zero_cols:
+            mask = np.ones(fingerprints.shape[1], dtype=bool)
+            mask[zero_cols] = False
+            fingerprints = fingerprints[:, mask]
 
         return fingerprints
 
@@ -136,7 +158,7 @@ class CollisionFreeMorganFP:
         np.ndarray
             A 2D array of fingerprints, where each row is a fingerprint.
         """
-        self.fit(smiles_list)
+        self.fit(smiles_list, remove_zero_columns=remove_zero_columns)
         return self.transform(smiles_list, remove_zero_columns)
 
     def get_feature_names(self) -> List[str]:
@@ -148,13 +170,11 @@ class CollisionFreeMorganFP:
         List[str]
             A list of feature names in the format fp_1, fp_2, etc.
         """
-        if not hasattr(self, 'length') or self.length is None:
+        if not self._is_fitted or self.length is None:
             raise ValueError("Model must be fitted before getting feature names")
 
-        # Generate names for all potential columns
         all_names = [f'fp_{i + 1}' for i in range(self.length)]
 
-        # Remove names for zero columns if they were identified
         if self._zero_columns:
             return [name for i, name in enumerate(all_names) if i not in self._zero_columns]
 
@@ -198,7 +218,6 @@ def generate_fingerprints(
     ValueError
         If data is a DataFrame but smiles_column is not provided.
     """
-    # Extract SMILES list from input data
     if isinstance(data, pd.DataFrame):
         if smiles_column is None:
             raise ValueError("smiles_column must be provided when data is a DataFrame")
@@ -206,7 +225,6 @@ def generate_fingerprints(
     else:
         smiles_list = data
 
-    # Initialize and fit the fingerprint generator
     fp_generator = CollisionFreeMorganFP(radius=radius, length=length)
     fingerprints = fp_generator.fit_transform(smiles_list, remove_zero_columns)
 
@@ -240,16 +258,13 @@ def save_fingerprints(
     -------
     None
     """
-    # Create directory if it doesn't exist
     output_dir = os.path.dirname(output_path)
     if output_dir and not os.path.exists(output_dir):
         os.makedirs(output_dir)
 
-    # Prepare column names if headers are requested
     columns = None
     if include_header:
         columns = fp_generator.get_feature_names()
 
-    # Convert fingerprints to DataFrame and save
     df = pd.DataFrame(fingerprints, columns=columns)
     df.to_csv(output_path, index=index)
