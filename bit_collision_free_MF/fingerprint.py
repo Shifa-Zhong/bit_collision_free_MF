@@ -58,13 +58,7 @@ class CollisionFreeMorganFP:
             The fitted object.
         """
         if self.length is None:
-            # When radius==0, all bitInfo entries share radius 0 so the
-            # collision detector (which compares radii) cannot find any
-            # collision.  Using radius=1 yields a superset of features,
-            # so a length that is collision-free at radius=1 is guaranteed
-            # to be collision-free at radius=0 as well.
-            detect_radius = max(self.radius, 1)
-            self.length = get_optimized_length(smiles_list, detect_radius)
+            self.length = get_optimized_length(smiles_list, self.radius)
 
         if remove_zero_columns:
             fingerprints = np.vstack([self._get_fingerprint(s) for s in smiles_list])
@@ -173,7 +167,7 @@ class CollisionFreeMorganFP:
         if not self._is_fitted or self.length is None:
             raise ValueError("Model must be fitted before getting feature names")
 
-        all_names = [f'fp_{i + 1}' for i in range(self.length)]
+        all_names = [f'fp_{i}' for i in range(self.length)]
 
         if self._zero_columns:
             return [name for i, name in enumerate(all_names) if i not in self._zero_columns]
