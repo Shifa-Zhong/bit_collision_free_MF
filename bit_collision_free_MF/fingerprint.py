@@ -19,8 +19,14 @@ class CollisionFreeMorganFP:
     """
     A class to generate collision-free Morgan fingerprints.
 
-    This class implements a method to create Morgan fingerprints without bit collisions
-    by determining the optimal bit vector length.
+    This class implements a method to create Morgan fingerprints without bit collisions.
+    Two modes are supported:
+
+    - ``"hashed"`` (default): Uses RDKit's hashed Morgan fingerprint and automatically
+      finds the minimal fingerprint length that avoids all bit collisions.
+    - ``"unfolded"``: Builds a direct mapping from Morgan invariant IDs to column
+      indices. Each unique substructure gets its own column, guaranteeing zero
+      collisions with the minimal possible number of columns.
 
     Parameters
     ----------
@@ -28,15 +34,23 @@ class CollisionFreeMorganFP:
         The radius for the Morgan fingerprint algorithm.
     length : Optional[int], default=None
         The length of the fingerprint bit vector. If None, it will be automatically
-        determined to avoid bit collisions.
+        determined to avoid bit collisions. Ignored in ``"unfolded"`` mode.
+    mode : str, default="hashed"
+        ``"hashed"`` for optimized-length hashed fingerprints,
+        ``"unfolded"`` for direct invariant-to-column mapping.
     """
 
-    def __init__(self, radius: int = 1, length: Optional[int] = None):
+    def __init__(self, radius: int = 1, length: Optional[int] = None,
+                 mode: str = "hashed"):
         """Initialize the CollisionFreeMorganFP class."""
+        if mode not in ("hashed", "unfolded"):
+            raise ValueError(f"mode must be 'hashed' or 'unfolded', got '{mode}'")
         self.radius = radius
         self.length = length
+        self.mode = mode
         self._zero_columns: List[int] = []
         self._is_fitted: bool = False
+        self._invariant_to_col: Dict[int, int] = {}  # unfolded mode only
 
     def fit(self, smiles_list: List[str],
             remove_zero_columns: bool = False) -> 'CollisionFreeMorganFP':
@@ -57,8 +71,20 @@ class CollisionFreeMorganFP:
         CollisionFreeMorganFP
             The fitted object.
         """
-        if self.length is None:
-            self.length = get_optimized_length(smiles_list, self.radius)
+        if self.mode == "unfolded":
+            all_invariants: set = set()
+            for smi in smiles_list:
+                mol = Chem.MolFromSmiles(smi)
+                if mol is None:
+                    continue
+                unhashed_fp = AllChem.GetMorganFingerprint(mol, self.radius)
+                all_invariants.update(unhashed_fp.GetNonzeroElements().keys())
+            sorted_invariants = sorted(all_invariants)
+            self._invariant_to_col = {inv: idx for idx, inv in enumerate(sorted_invariants)}
+            self.length = len(sorted_invariants)
+        else:
+            if self.length is None:
+                self.length = get_optimized_length(smiles_list, self.radius)
 
         if remove_zero_columns:
             fingerprints = np.vstack([self._get_fingerprint(s) for s in smiles_list])
@@ -88,8 +114,16 @@ class CollisionFreeMorganFP:
         if mol is None:
             raise ValueError(f"Could not parse SMILES string: {smiles}")
 
-        fp = AllChem.GetHashedMorganFingerprint(mol, self.radius, self.length)
-        return np.array(list(fp))
+        if self.mode == "unfolded":
+            fp_array = np.zeros(self.length, dtype=np.int32)
+            unhashed_fp = AllChem.GetMorganFingerprint(mol, self.radius)
+            for inv, count in unhashed_fp.GetNonzeroElements().items():
+                if inv in self._invariant_to_col:
+                    fp_array[self._invariant_to_col[inv]] = count
+            return fp_array
+        else:
+            fp = AllChem.GetHashedMorganFingerprint(mol, self.radius, self.length)
+            return np.array(list(fp))
 
     def transform(self,
                   smiles_list: List[str],
@@ -174,13 +208,53 @@ class CollisionFreeMorganFP:
 
         return all_names
 
+    def get_invariant_mapping(self) -> Dict[int, int]:
+        """
+        Get the mapping from column index to Morgan invariant ID.
+
+        Only available in ``"unfolded"`` mode. This mapping enables
+        interpretability: use the invariant ID with RDKit's ``bitInfo``
+        to identify the exact substructure each column represents.
+
+        Returns
+        -------
+        Dict[int, int]
+            A dictionary mapping column index to Morgan invariant ID.
+
+        Raises
+        ------
+        ValueError
+            If called in ``"hashed"`` mode.
+        RuntimeError
+            If the model has not been fitted yet.
+
+        Examples
+        --------
+        >>> from rdkit.Chem import Draw, AllChem, Chem
+        >>> mapping = fp_gen.get_invariant_mapping()
+        >>> # Suppose column 42 is important; find its invariant ID
+        >>> inv_id = mapping[42]
+        >>> # Visualize the substructure on a molecule
+        >>> mol = Chem.MolFromSmiles("CCO")
+        >>> bi = {}
+        >>> fp = AllChem.GetMorganFingerprint(mol, radius=2, bitInfo=bi)
+        >>> if inv_id in bi:
+        ...     img = Draw.DrawMorganBit(mol, inv_id, bi)
+        """
+        if self.mode != "unfolded":
+            raise ValueError("get_invariant_mapping() is only available in 'unfolded' mode")
+        if not self._is_fitted:
+            raise RuntimeError("Must call fit() before get_invariant_mapping()")
+        return {idx: inv for inv, idx in self._invariant_to_col.items()}
+
 
 def generate_fingerprints(
         data: Union[pd.DataFrame, List[str]],
         smiles_column: Optional[str] = None,
         radius: int = 1,
         length: Optional[int] = None,
-        remove_zero_columns: bool = False
+        remove_zero_columns: bool = False,
+        mode: str = "hashed"
 ) -> Tuple[np.ndarray, CollisionFreeMorganFP]:
     """
     Generate collision-free Morgan fingerprints from molecular data.
@@ -196,9 +270,12 @@ def generate_fingerprints(
         The radius for the Morgan fingerprint algorithm.
     length : Optional[int], default=None
         The length of the fingerprint bit vector. If None, it will be automatically
-        determined to avoid bit collisions.
+        determined to avoid bit collisions. Ignored in ``"unfolded"`` mode.
     remove_zero_columns : bool, default=False
         Whether to remove columns that are all zeros.
+    mode : str, default="hashed"
+        ``"hashed"`` for optimized-length hashed fingerprints,
+        ``"unfolded"`` for direct invariant-to-column mapping.
 
     Returns
     -------
@@ -219,7 +296,7 @@ def generate_fingerprints(
     else:
         smiles_list = data
 
-    fp_generator = CollisionFreeMorganFP(radius=radius, length=length)
+    fp_generator = CollisionFreeMorganFP(radius=radius, length=length, mode=mode)
     fingerprints = fp_generator.fit_transform(smiles_list, remove_zero_columns)
 
     return fingerprints, fp_generator

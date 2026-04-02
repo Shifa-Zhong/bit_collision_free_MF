@@ -8,7 +8,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "bit_collision_free_MF"
 dynamic = ["version"]                      
-description = "Generate molecular fingerprints with guaranteed collision‑free bits."
+description = "Generate collision-free Morgan fingerprints with hashed or unfolded mode."
 readme = "README.md"
 license = {file = "LICENSE"}              
 requires-python = ">=3.9"
